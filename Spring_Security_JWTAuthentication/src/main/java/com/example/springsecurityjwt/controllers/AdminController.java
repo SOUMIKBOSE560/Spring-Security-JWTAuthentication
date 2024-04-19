@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.NoSuchAlgorithmException;
@@ -22,6 +24,9 @@ public class AdminController {
 
     @Autowired
     private JwtHelper jwtHelper;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Autowired
     private ProductService productService;
@@ -55,10 +60,22 @@ public class AdminController {
     public List<Product> all(@RequestHeader("Authorization") String authorizationHeader) throws NoSuchAlgorithmException {
         String token = authorizationHeader.substring(7);
         System.out.println("TOKEN : " + token);
-        boolean value = jwtHelper.validateToken(token);
-        if(value) {
+
+        //AUTHENTICATE USER
+        String username = jwtHelper.extractUsername(token);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        boolean authentication = jwtHelper.validateToken(token,userDetails);
+        boolean isTokenExpired = jwtHelper.isTokenExpired(token);
+
+        System.out.println("USER DETAILS : " + userDetails);
+        System.out.println("USERNAME FROM TOKEN : " + username);
+        System.out.println("AUTHENTICATION : " + authentication);
+        System.out.println("IS TOKEN EXPIRED : " + isTokenExpired);
+
+        if(!isTokenExpired && authentication) {
             return productService.getAllProducts();
         }
+
         return null;
 
     }
